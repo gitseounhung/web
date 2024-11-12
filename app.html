@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>우리반 추억저장소 🌟</title>
+</head>
+<body>
+
+    <header class="header">
+        <nav class="nav-container">
+            <div class="logo">
+                <span></span> 2학년 9반 프로필 저장소
+            </div>
+            
+        </nav>
+    </header>
+
+    <main class="classroom-board">
+        <h2>행복한 우리반의 특별한 순간들 ✨</h2>
+        <div class="photo-grid" id="photoGrid">
+            <!-- 업로드된 사진 카드가 추가됩니다. -->
+        </div>
+    </main>
+
+    <div class="upload-button" onclick="openUploadModal()">📸</div>
+
+    <!-- 사진 업로드 모달 -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeUploadModal()">×</span>
+            <h2>프로필 업로드</h2>
+            <input type="text" id="titleInput" placeholder="이름 입력" required>
+            <textarea id="descriptionInput" rows="2" placeholder="프로필"></textarea>
+            <input type="file" id="fileInput" accept="image/*" onchange="previewImage(event)">
+            <input type="text" id="tagsInput" placeholder="태그 입력 (쉼표로 구분)">
+            <button class="button" onclick="addPhotoCard()">프로필 추가</button>
+        </div>
+    </div>
+    <script src="index.js"></script>
+
+
+   
+
+</body>
+</html>
+
+           
