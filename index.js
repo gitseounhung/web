@@ -1,41 +1,92 @@
 const photoGrid = document.getElementById("photoGrid");
 const uploadModal = document.getElementById("uploadModal");
-let imagePreview;
+let imagePreview = null;
+let isEditing = false;
+let currentPhotoCard = null;
 
-// 모달 열기 함수
+
 function openUploadModal() {
     uploadModal.style.display = "flex";
 }
 
-// 모달 닫기 함수
+// 모달 닫기
 function closeUploadModal() {
     uploadModal.style.display = "none";
+    resetModalFields();
+}
+
+// 모달 필드 초기화
+function resetModalFields() {
     document.getElementById("titleInput").value = "";
     document.getElementById("descriptionInput").value = "";
     document.getElementById("fileInput").value = "";
     document.getElementById("tagsInput").value = "";
     imagePreview = null;
+    const imgPreviewElement = document.getElementById("imagePreview");
+    imgPreviewElement.src = "";
 }
 
-// 이미지 미리보기 함수
+// 이미지 미리보기 (업로드 모드)
 function previewImage(event) {
     const reader = new FileReader();
     reader.onload = function() {
         imagePreview = reader.result;
-        document.getElementById("imagePreview").src = imagePreview; // 미리보기 이미지 업데이트
+        const imgPreviewElement = document.getElementById("imagePreview");
+        imgPreviewElement.src = imagePreview;
     };
     reader.readAsDataURL(event.target.files[0]);
 }
 
-// 사진 카드 추가 함수
-async function addPhotoCard() {
-    const title = document.getElementById("titleInput").value;
-    const description = document.getElementById("descriptionInput").value;
-    const tags = document.getElementById("tagsInput").value.split(',');
-
+// 사진 카드 추가
+function addPhotoCard() {
+    openUploadModal()
+    const title = document.getElementById("titleInput").value.trim();
+    const description = document.getElementById("descriptionInput").value.trim();
+    const tags = document.getElementById("tagsInput").value.split(',').map(tag => tag.trim());
+    const imagePreview = document.getElementById("fileInput").files[0]; // 이미지 미리보기 확인
     
+    if (!title || !description || !imagePreview) {
+        showAlertModal("모든 필드를 입력하고 이미지를 업로드해 주세요.");
+        return;
+    }
 
-    // 새로운 사진 카드 요소 생성
+    const photoCard = createPhotoCard(title, description, tags);
+
+    const photoGrid = document.getElementById("photoGrid");
+    if (photoGrid) {
+        photoGrid.appendChild(photoCard);
+    } else {
+        console.error("photoGrid 요소를 찾을 수 없습니다.");
+    }
+
+    closeUploadModal();
+    savePhotosToLocalStorage();
+}
+
+function showAlertModal(message) {
+    const alertModal = document.getElementById("alertModal");
+    const alertMessage = document.getElementById("alertMessage");
+    alertMessage.textContent = message;
+    alertModal.style.display = "block";
+}
+
+document.getElementById("closeAlertModal").onclick = function() {
+    document.getElementById("alertModal").style.display = "none";
+};
+
+document.getElementById("confirmAlert").onclick = function() {
+    document.getElementById("alertModal").style.display = "none";
+};
+
+window.onclick = function(event) {
+    const alertModal = document.getElementById("alertModal");
+    if (event.target == alertModal) {
+        alertModal.style.display = "none";
+    }
+};
+
+// 사진 카드 생성
+function createPhotoCard(title, description, tags) {
     const photoCard = document.createElement("div");
     photoCard.classList.add("photo-card");
 
@@ -43,7 +94,7 @@ async function addPhotoCard() {
     photoImage.classList.add("photo-image");
 
     const img = document.createElement("img");
-    img.src = imagePreview; // 이미지 미리보기 사용
+    img.src = imagePreview; // 이미지 소스 설정
     photoImage.appendChild(img);
 
     const photoInfo = document.createElement("div");
@@ -51,48 +102,20 @@ async function addPhotoCard() {
 
     const h3 = document.createElement("h3");
     h3.textContent = title;
+
     const p = document.createElement("p");
     p.textContent = description;
 
-    // 태그 추가
     const tagContainer = document.createElement("div");
     tagContainer.classList.add("tags");
     tags.forEach(tag => {
         const tagElement = document.createElement("span");
         tagElement.classList.add("tag");
-        tagElement.textContent = tag.trim();
+        tagElement.textContent = tag;
         tagContainer.appendChild(tagElement);
     });
 
-    // 좋아요 및 감정 표현 버튼
-    const emotionButtons = document.createElement("div");
-    emotionButtons.classList.add("emotion-buttons");
-    
-    const likeButton = document.createElement("button");
-    likeButton.classList.add("emotion-button");
-    likeButton.innerHTML = "❤️", 1
-    likeButton.onclick = () => {
-        alert(`${title}에 좋아요를 눌렀습니다!`);
-    };
-
-    const editButton = document.createElement("button");
-    editButton.classList.add("emotion-button");
-    editButton.innerHTML = "🖉 편집";
-    editButton.onclick = () => {
-        editPhotoCard(photoCard, title, description, tags);
-    };
-
-    const deleteButton = document.createElement("button");
-    deleteButton.classList.add("emotion-button");
-    deleteButton.innerHTML = "❌ 삭제";
-    deleteButton.onclick = () => {
-        photoCard.remove();
-        savePhotosToLocalStorage(); // 로컬 스토리지에 저장
-    };
-
-    emotionButtons.appendChild(likeButton);
-    emotionButtons.appendChild(editButton);
-    emotionButtons.appendChild(deleteButton);
+    const emotionButtons = createEmotionButtons(photoCard);
 
     photoInfo.appendChild(h3);
     photoInfo.appendChild(p);
@@ -102,99 +125,174 @@ async function addPhotoCard() {
     photoCard.appendChild(photoImage);
     photoCard.appendChild(photoInfo);
 
-    photoGrid.appendChild(photoCard); // 갤러리에 추가
-
-    closeUploadModal(); // 모달 닫기
-    savePhotosToLocalStorage(); // 로컬 스토리지에 저장
+    return photoCard;
 }
 
-// 서버에서 사진을 업로드하는 함수
-async function uploadPhoto() {
-    const title = document.getElementById("titleInput").value;
-    const description = document.getElementById("descriptionInput").value;
-    const tags = document.getElementById("tagsInput").value.split(',');
-    const fileInput = document.getElementById("fileInput");
+// 감정 표현 버튼 생성
+function createEmotionButtons(photoCard) {
+    const emotionButtons = document.createElement("div");
+    emotionButtons.classList.add("emotion-buttons");
 
-    if (!title || !description || !fileInput.files[0]) {
-        alert("모든 필드를 입력하고 이미지를 업로드해 주세요.");
+    const likeButton = document.createElement("button");
+    likeButton.classList.add("emotion-button");
+    likeButton.innerHTML = `❤️ <span class="like-count">0</span>`;
+    likeButton.onclick = () => {
+        const likeCountElement = likeButton.querySelector(".like-count");
+        let currentCount = parseInt(likeCountElement.innerText);
+        likeCountElement.innerText = currentCount + 1;
+    };
+
+    const editButton = document.createElement("button");
+    editButton.classList.add("emotion-button");
+    editButton.innerHTML = "✏️ 편집";
+    editButton.onclick = () => {
+        openEditModal(photoCard);
+    };
+
+    const deleteButton = document.createElement("button");
+    deleteButton.classList.add("emotion-button");
+    deleteButton.innerHTML = "❌ 삭제";
+    deleteButton.onclick = () => {
+        openDeleteConfirmModal(photoCard);
+    };
+
+    emotionButtons.appendChild(likeButton);
+    emotionButtons.appendChild(editButton);
+    emotionButtons.appendChild(deleteButton);
+
+    return emotionButtons;
+}
+
+// 삭제 확인 모달 열기
+function openDeleteConfirmModal(photoCard) {
+    const deleteModal = document.getElementById("deleteConfirmModal");
+    deleteModal.style.display = "block";
+
+    // 확인 버튼 클릭 시
+    document.getElementById("confirmDelete").onclick = () => {
+        if (photoCard) {
+            photoCard.remove(); // photoCard가 유효한 경우 삭제
+            savePhotosToLocalStorage(); // 로컬 스토리지에 저장
+            closeDeleteConfirmModal(); // 모달 닫기
+        }
+    };
+
+    // 취소 버튼 클릭 시
+    document.getElementById("cancelDelete").onclick = () => {
+        closeDeleteConfirmModal();
+    };
+}
+
+// 삭제 확인 모달 닫기
+function closeDeleteConfirmModal() {
+    document.getElementById("deleteConfirmModal").style.display = "none";
+}
+
+// 클릭 시 모달 닫기
+window.onclick = function(event) {
+    const deleteModal = document.getElementById("deleteConfirmModal");
+    if (event.target == deleteModal) {
+        closeDeleteConfirmModal();
+    }
+}
+
+
+
+// 편집 모달 열기
+// 편집 모달 열기
+function openEditModal(photoCard) {
+    isEditing = true; // 편집 모드 활성화
+    currentPhotoCard = photoCard; // 현재 편집 중인 카드 저장
+
+    const titleElement = photoCard.querySelector("h3");
+    const descriptionElement = photoCard.querySelector("p");
+    const tagElements = photoCard.querySelectorAll(".tag");
+    const imgElement = photoCard.querySelector("img");
+
+    if (!titleElement || !descriptionElement || !imgElement) {
+        console.error("사진 카드의 필수 요소가 누락되었습니다.");
         return;
     }
 
-    const formData = new FormData();
-    formData.append('photo', fileInput.files[0]);
-    formData.append('title', title);
-    formData.append('description', description);
-    formData.append('tags', tags);
+    // 편집 모달의 입력 필드에 기존 데이터 채우기
+    document.getElementById("editTitleInput").value = titleElement.textContent || "";
+    document.getElementById("editDescriptionInput").value = descriptionElement.textContent || "";
+    document.getElementById("editTagsInput").value = Array.from(tagElements).map(tag => tag.textContent).join(", ");
+    document.getElementById("editImagePreview").src = imgElement.src || "";
 
-    try {
-        const response = await fetch('http://localhost:3000/upload', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await response.json();
-        if (response.ok) {
-            alert("사진이 성공적으로 업로드되었습니다!");
-            displayPhotoCard(data); // 화면에 업로드된 사진을 표시
-            closeUploadModal();
-        } else {
-            alert(data.message || '업로드 실패');
-        }
-    } catch (error) {
-        console.error('Error uploading photo:', error);
+    // 편집 모달 열기
+    const editModal = document.getElementById("editModal");
+    if (editModal) {
+        editModal.style.display = "flex";
     }
 }
 
-// 서버에서 받아온 사진을 화면에 표시하는 함수
-function displayPhotoCard(data) {
-    const photoCard = document.createElement("div");
-    photoCard.classList.add("photo-card");
+function closeEditModal() {
+    const editModal = document.getElementById("editModal");
+    if (editModal) {
+        editModal.style.display = "none"; // 모달 닫기
+    }
 
-    const photoImage = document.createElement("div");
-    photoImage.classList.add("photo-image");
-
-    const img = document.createElement("img");
-    img.src = `http://localhost:3000${data.photoUrl}`; // 서버 주소와 URL 결합
-    photoImage.appendChild(img);
-
-    const photoInfo = document.createElement("div");
-    const h3 = document.createElement("h3");
-    h3.textContent = data.title;
-    const p = document.createElement("p");
-    p.textContent = data.description;
-
-    const tagContainer = document.createElement("div");
-    tagContainer.classList.add("tags");
-    data.tags.forEach(tag => {
-        const tagElement = document.createElement("span");
-        tagElement.classList.add("tag");
-        tagElement.textContent = tag;
-        tagContainer.appendChild(tagElement);
-    });
-
-    photoInfo.appendChild(h3);
-    photoInfo.appendChild(p);
-    photoInfo.appendChild(tagContainer);
-
-    photoCard.appendChild(photoImage);
-    photoCard.appendChild(photoInfo);
-    photoGrid.appendChild(photoCard);
+    isEditing = false; // 편집 모드 비활성화
+    currentPhotoCard = null; // 현재 편집 중인 카드 초기화
+}
+function previewEditImage(event) {
+    const file = event.target.files[0];
+    const imgPreview = document.getElementById("editImagePreview");
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imgPreview.src = e.target.result; // 미리보기 이미지 업데이트
+        };
+        reader.readAsDataURL(file);
+    }
 }
 
-// 사진 카드 편집 함수
-function editPhotoCard(photoCard, title, description, tags) {
-    document.getElementById("titleInput").value = title;
-    document.getElementById("descriptionInput").value = description;
-    document.getElementById("tagsInput").value = tags.join(", ");
-    imagePreview = photoCard.querySelector("img").src; // 기존 이미지 미리보기
+function saveEditedPhotoCard() {
+    const title = document.getElementById("editTitleInput").value.trim();
+    const description = document.getElementById("editDescriptionInput").value.trim();
+    const tags = document.getElementById("editTagsInput").value
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+    const imageSrc = document.getElementById("editImagePreview").src;
 
-    // 기존 카드 삭제
-    photoCard.remove();
+    if (!currentPhotoCard) {
+        console.error("편집 중인 프로필 카드가 없습니다.");
+        return;
+    }
 
-    // 모달 열기
-    openUploadModal();
+    // 프로필 카드의 기존 데이터를 업데이트
+    const titleElement = currentPhotoCard.querySelector("h3");
+    const descriptionElement = currentPhotoCard.querySelector("p");
+    const tagContainer = currentPhotoCard.querySelector(".tags");
+    const imgElement = currentPhotoCard.querySelector("img");
+
+    if (titleElement) titleElement.textContent = title;
+    if (descriptionElement) descriptionElement.textContent = description;
+
+    if (tagContainer) {
+        tagContainer.innerHTML = ""; // 기존 태그 제거
+        tags.forEach(tag => {
+            const tagElement = document.createElement("span");
+            tagElement.classList.add("tag");
+            tagElement.textContent = tag;
+            tagContainer.appendChild(tagElement);
+        });
+    }
+
+    if (imgElement) imgElement.src = imageSrc;
+
+    // 편집 모달 닫기
+    closeEditModal();
+    savePhotosToLocalStorage(); // 로컬 스토리지 업데이트
 }
 
-// 로컬 스토리지에 사진 저장
+
+
+
+// 로컬 스토리지에 저장
 function savePhotosToLocalStorage() {
     const photos = [];
     const cards = photoGrid.querySelectorAll(".photo-card");
@@ -203,20 +301,31 @@ function savePhotosToLocalStorage() {
         const title = card.querySelector("h3").innerText;
         const description = card.querySelector("p").innerText;
         const tags = Array.from(card.querySelectorAll(".tag")).map(tag => tag.innerText);
-        photos.push({ img, title, description, tags });
+        const likeCount = card.querySelector(".like-count").innerText;
+        photos.push({ img, title, description, tags, likeCount });
     });
     localStorage.setItem("photos", JSON.stringify(photos));
 }
 
-// 페이지 로드 시 로컬 스토리지에서 사진 로드
+// 로컬 스토리지에서 로드
 window.onload = function() {
     const storedPhotos = JSON.parse(localStorage.getItem("photos")) || [];
     storedPhotos.forEach(photo => {
-        imagePreview = photo.img; // 이미지 미리보기
-        addPhotoCard(); // 카드 추가
+        imagePreview = photo.img;
+        const photoCard = createPhotoCard(photo.title, photo.description, photo.tags);
+        const likeCountElement = photoCard.querySelector(".like-count");
+        likeCountElement.innerText = photo.likeCount;
+        photoGrid.appendChild(photoCard);
     });
-}
+};
 
 // 이벤트 리스너 설정
 document.getElementById("fileInput").addEventListener("change", previewImage);
-document.getElementById("uploadButton").addEventListener("click", uploadPhoto);
+document.getElementById("editSaveButton").addEventListener("click", saveEditedPhotoCard);
+document.getElementById("uploadButton").addEventListener("click", () => {
+    if (isEditing) {
+        saveEditedPhotoCard();
+    } else {
+        addPhotoCard();
+    }
+});
