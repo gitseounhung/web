@@ -4,42 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <title>우리반 추억저장소 🌟</title>
+    <title>2학년 9반 프로필</title>
 </head>
 <body>
 
     <header class="header">
         <nav class="nav-container">
             <div class="logo">
-                <span></span> 2학년 9반 프로필 저장소
+                <span></span> 2학년 9반 Profile
             </div>
-            
         </nav>
     </header>
 
     <main class="classroom-board">
-        <h2>행복한 우리반의 특별한 순간들 ✨</h2>
+        <h2>행복한 우리반의 특별한 순간들</h2>
         <div class="photo-grid" id="photoGrid">
             <!-- 업로드된 사진 카드가 추가됩니다. -->
         </div>
     </main>
 
-    <div class="upload-button" onclick="openUploadModal()">📸</div>
+    <div class="upload-button" onclick="openUploadModal()" aria-label="사진 업로드 버튼">📸</div>
 
     <!-- 사진 업로드 모달 -->
-    <div class="modal" id="uploadModal">
+    <div class="modal" id="uploadModal" role="dialog" aria-labelledby="modalTitle" aria-describedby="modalDescription">
         <div class="modal-content">
-            <span class="close-modal" onclick="closeUploadModal()">×</span>
-            <h2>프로필 업로드</h2>
-            <input type="text" id="titleInput" placeholder="이름 입력" required>
+            <span class="close-modal" onclick="closeUploadModal()" aria-label="모달 닫기">×</span>
+            <h2 id="modalTitle">프로필 업로드</h2>
+            <input type="text" id="titleInput" placeholder="이름 입력" required aria-required="true">
             <textarea id="descriptionInput" rows="2" placeholder="프로필"></textarea>
-            <input type="file" id="fileInput" accept="image/*" onchange="previewImage(event)">
+            <label for="fileInput">이미지 업로드</label>
+            <input type="file" id="fileInput" accept="image/*" onchange="previewImage(event)" aria-label="이미지 파일 선택">
             <input type="text" id="tagsInput" placeholder="태그 입력 (쉼표로 구분)">
             <button class="button" onclick="addPhotoCard()">프로필 추가</button>
         </div>
     </div>
+
+    <!-- 프로필 편집 모달 -->
+    <div class="modal" id="editModal" role="dialog" aria-labelledby="editModalTitle" aria-describedby="editModalDescription">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeEditModal()" aria-label="모달 닫기">×</span>
+            <h2 id="editModalTitle">프로필 편집</h2>
+            <input type="text" id="editTitleInput" placeholder="이름 수정" required aria-required="true">
+            <textarea id="editDescriptionInput" rows="2" placeholder="프로필 수정"></textarea>
+            <input type="file" id="editFileInput" accept="image/*" onchange="previewEditImage(event)" aria-label="이미지 파일 선택">
+            <label for="editFileInput">이미지 변경</label>
+            <input type="text" id="editTagsInput" placeholder="태그 수정 (쉼표로 구분)">
+            <img id="editImagePreview" src="" alt="이미지 미리보기" style="display: block; margin: 10px auto; max-width: 100%;">
+            <button class="button" onclick="saveEditedPhotoCard()">수정 완료</button>
+        </div>
+    </div>
+    <!-- 삭제 모달 -->
+    <div id="deleteConfirmModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeDeleteConfirmModal()">&times;</span>
+            <h2>삭제 확인</h2>
+            <p>정말로 이 항목을 삭제하시겠습니까?</p>
+            <button id="confirmDelete">삭제</button>
+            <button id="cancelDelete">취소</button>
+        </div>
+    </div>
+    
+
+<!-- 프로필 업로드 모달 -->
+
+
+<div id="alertModal" class="modal">
+    <div class="modal-content">
+        <span id="closeAlertModal" class="close">&times;</span>
+        <p id="alertMessage"></p>
+        <button id="confirmAlert">확인</button>
+    </div>
+</div>
+
+    
+
     <script src="index.js"></script>
 
+</body>
+</html>
 
    
 
